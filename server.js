@@ -12,9 +12,32 @@ const server = express()
 
 const io = socketIO(server);
 
+let users = [];
+
 io.on('connection', (socket) => {
   console.log('Client connected');
-  socket.on('disconnect', () => console.log('Client disconnected'));
+  socket.on('disconnect', () => {
+    users = users.filter(x => x.userID !== socket.id);
+    console.log('Client disconnected')
+    io.sockets.emit("users", users);
+  });
+  socket.on('callUserName', (data) => {
+    users.forEach(u => {
+      if (u.username == data.username ) {
+        io.to(u.userID).emit('newMessage', data.message);
+      }
+    })
+  });
+  // for (let [id, socket] of io.of("/").sockets) {
+  // }
+  var cUserName = socket.handshake.query.username;
+  users.push({
+    userID: socket.id,
+    username: cUserName,
+  });
+  // socket.emit("users", users);
+  socket.join(cUserName);
+  io.sockets.emit("users", users);
 });
 
-setInterval(() => io.emit('time', new Date().toTimeString()), 1000);
+// setInterval(() => io.emit('time', new Date().toTimeString()), 1000);
